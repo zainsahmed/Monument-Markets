@@ -4,6 +4,8 @@ import { z } from 'zod'
 import { SupplierSchema, SOURCING_STEPS } from '@/lib/schemas'
 import { run, log, must, check } from './core'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createAlerts } from '@/lib/alerts-db'
+import { changeKey } from '@/lib/alerts'
 import { HttpError } from '@/lib/auth'
 
 const uuid = z.string().uuid()
@@ -45,6 +47,13 @@ export async function addQuote(input: unknown) {
     if (v.validUntil && v.validUntil < v.quoteDate) throw new HttpError(400, 'A quote cannot expire before it was issued.')
     const q = must(await s.supabase.from('supplier_quotes').insert({ company_id: s.companyId, supplier_id: v.supplierId, company_opportunity_id: v.coId ?? null, amount: v.amount, quote_date: v.quoteDate, valid_until: v.validUntil ?? null, notes: v.notes ?? null }).select('id').single())
     await log(s, { entity: 'supplier_quote', id: q.id, action: 'quote_added', after: { amount: v.amount, supplier_id: v.supplierId } })
+    // tell the rest of the team (not the person who just entered it)
+    if (v.coId) {
+      const admin = createAdminClient()
+      const { data: co } = await admin.from('company_opportunities').select('opportunity_id, opportunities(title)').eq('id', v.coId).maybeSingle()
+      const { data: members } = await admin.from('company_members').select('user_id').eq('company_id', s.companyId).in('role', ['owner', 'member']).neq('user_id', s.user.id)
+      if (co) await createAlerts(admin, (members ?? []).map((m) => ({ dedupeKey: changeKey('quote_received', m.user_id, co.opportunity_id, q.id), userId: m.user_id, companyId: s.companyId, opportunityId: co.opportunity_id, type: 'quote_received' as const, title: `Quote received ($${v.amount.toLocaleString('en-US')}): ${(co as any).opportunities?.title ?? 'opportunity'}`, payload: { quote_id: q.id } })))
+    }
     revalidatePath('/suppliers/[id]', 'page'); revalidatePath('/opportunities/[id]', 'page')
     return { id: q.id as string }
   })

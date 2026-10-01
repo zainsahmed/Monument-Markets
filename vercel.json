@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    { "path": "/api/cron/sync-sam", "schedule": "0 11 * * *" },
+    { "path": "/api/cron/alerts", "schedule": "0 * * * *" }
+  ],
+  "functions": {
+    "app/api/cron/sync-sam/route.ts": { "maxDuration": 300 },
+    "app/api/cron/alerts/route.ts": { "maxDuration": 300 },
+    "app/api/opportunities/[id]/analyze/route.ts": { "maxDuration": 300 },
+    "app/api/opportunities/[id]/extract/route.ts": { "maxDuration": 300 },
+    "app/api/opportunities/[id]/documents/fetch/route.ts": { "maxDuration": 300 }
+  }
+}

@@ -1,6 +1,9 @@
 /**
- * Build check (spec §16): fail if any server-only secret name — or its actual value — appears in
- * client-reachable output (.next/static) or in client component source.
+ * Build check (spec §16): fail the build if a server-only secret can reach the browser.
+ *  1. Compiled client output (.next/static, .next-qa/static): no secret VALUES from the environment, no service-role
+ *     JWTs, no Anthropic / Resend key shapes.
+ *  2. Source: no 'use client' file reads process.env.<SECRET> or imports a module that imports 'server-only'
+ *     (Next also enforces the latter at build time; this reports it earlier with file names).
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
@@ -11,7 +14,7 @@ const secretValues = SECRET_NAMES.map((n) => process.env[n]).filter((v): v is st
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
-    if (['node_modules', '.next', '.git'].includes(e.name) && dir === root) continue
+    if (['node_modules', '.next', '.next-qa', '.git', 'test-results'].includes(e.name)) continue
     const p = path.join(dir, e.name)
     if (e.isDirectory()) walk(p, out)
     else out.push(p)
@@ -20,32 +23,40 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 const problems: string[] = []
+const JWT = /eyJ[A-Za-z0-9_-]{10,}\.([A-Za-z0-9_-]{10,})\.[A-Za-z0-9_-]{10,}/g
 
-// 1. compiled client bundles
-const staticDir = path.join(root, '.next/static')
-try {
-  statSync(staticDir)
-  for (const f of walk(staticDir)) {
+for (const dist of ['.next/static', '.next-qa/static']) {
+  const dir = path.join(root, dist)
+  try { statSync(dir) } catch { continue }
+  const files: string[] = []
+  const rec = (d: string) => { for (const e of readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); e.isDirectory() ? rec(p) : files.push(p) } }
+  rec(dir)
+  for (const f of files) {
     if (!/\.(js|css|html|json|map)$/.test(f)) continue
     const text = readFileSync(f, 'utf8')
-    for (const n of SECRET_NAMES) if (text.includes(n)) problems.push(`${path.relative(root, f)} mentions ${n}`)
-    for (const v of secretValues) if (text.includes(v)) problems.push(`${path.relative(root, f)} contains a secret value`)
+    const rel = path.relative(root, f)
+    for (const v of secretValues) if (text.includes(v)) problems.push(`${rel} contains a secret value`)
+    for (const m of text.matchAll(JWT)) {
+      try { if (JSON.parse(Buffer.from(m[1], 'base64url').toString()).role === 'service_role') problems.push(`${rel} contains a service-role JWT`) } catch { /* not a JWT */ }
+    }
+    if (/sk-ant-[A-Za-z0-9_-]{20,}/.test(text)) problems.push(`${rel} contains an Anthropic-style key`)
+    if (/\bre_[A-Za-z0-9]{24,}\b/.test(text)) problems.push(`${rel} contains a Resend-style key`)
   }
-} catch {
-  /* no build output yet */
 }
 
-// 2. 'use client' source files and anything under components/ must not reference secret names or server-only modules
-for (const dir of ['app', 'components', 'lib']) {
-  let files: string[] = []
-  try { files = walk(path.join(root, dir)) } catch { continue }
-  for (const f of files) {
-    if (!/\.(ts|tsx)$/.test(f)) continue
-    const text = readFileSync(f, 'utf8')
-    const isClient = /^\s*['"]use client['"]/m.test(text.slice(0, 200))
-    if (!isClient) continue
-    for (const n of SECRET_NAMES) if (text.includes(n)) problems.push(`client file ${path.relative(root, f)} references ${n}`)
-    if (/from ['"]@\/lib\/(env|supabase\/admin|ai|sam|usaspending)(\/|['"])/.test(text)) problems.push(`client file ${path.relative(root, f)} imports a server-only module`)
+const sources = ['app', 'components', 'lib'].flatMap((d) => { try { return walk(path.join(root, d)) } catch { return [] } }).filter((f) => /\.(ts|tsx)$/.test(f))
+const serverOnly = new Set(sources.filter((f) => /^\s*import\s+['"]server-only['"]/m.test(readFileSync(f, 'utf8'))).map((f) => f.replace(/\.(ts|tsx)$/, '').replace(/\/index$/, '')))
+const resolve = (spec: string) => path.join(root, spec.replace(/^@\//, '')).replace(/\/index$/, '')
+
+for (const f of sources) {
+  const text = readFileSync(f, 'utf8')
+  if (!/^\s*['"]use client['"]/m.test(text.slice(0, 200))) continue
+  const rel = path.relative(root, f)
+  for (const n of SECRET_NAMES) if (new RegExp(`process\\.env\\.${n}\\b`).test(text) || new RegExp(`process\\.env\\[['"]${n}['"]\\]`).test(text)) problems.push(`client file ${rel} reads ${n}`)
+  // type-only imports are erased at compile time and cannot leak anything
+  for (const m of text.matchAll(/^import\s+(?!type\b)[^;]*?from\s+['"](@\/[^'"]+)['"]/gm)) {
+    const target = resolve(m[1])
+    if (serverOnly.has(target)) problems.push(`client file ${rel} imports server-only module ${m[1]}`)
   }
 }
 
@@ -53,4 +64,4 @@ if (problems.length) {
   console.error('SECRET LEAK CHECK FAILED:\n' + problems.map((p) => '  - ' + p).join('\n'))
   process.exit(1)
 }
-console.log('check-secrets: ok')
+console.log(`check-secrets: ok (${sources.length} source files, ${serverOnly.size} server-only modules)`)

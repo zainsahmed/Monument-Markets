@@ -4,6 +4,9 @@ import { z } from 'zod'
 import { run, log, must, check } from './core'
 import { PIPELINE_STAGES } from '@/lib/db-types'
 import { HttpError, type Session } from '@/lib/auth'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { createAlerts } from '@/lib/alerts-db'
+import { changeKey } from '@/lib/alerts'
 
 const uuid = z.string().uuid()
 const stage = z.enum(PIPELINE_STAGES.map((s) => s.key) as [string, ...string[]])
@@ -65,6 +68,11 @@ export async function moveStage(input: unknown) {
     if (v.awardAmount !== undefined) patch.award_amount = v.awardAmount
     check(await s.supabase.from('company_opportunities').update(patch).eq('id', v.coId))
     await log(s, { entity: 'company_opportunity', id: v.coId, opportunityId: cur.opportunity_id, action: 'stage_moved', before: { stage: cur.pipeline_stage }, after: { stage: v.stage, note: v.note ?? null } })
+    // status-changed alert for the rest of the team
+    const admin = createAdminClient()
+    const { data: opp } = await admin.from('opportunities').select('title').eq('id', cur.opportunity_id).maybeSingle()
+    const { data: members } = await admin.from('company_members').select('user_id').eq('company_id', s.companyId).neq('user_id', s.user.id)
+    await createAlerts(admin, (members ?? []).map((m) => ({ dedupeKey: changeKey('status_changed', m.user_id, cur.opportunity_id, `${v.coId}:${v.stage}:${Date.now()}`), userId: m.user_id, companyId: s.companyId, opportunityId: cur.opportunity_id, type: 'status_changed' as const, title: `Moved to ${PIPELINE_STAGES.find((x) => x.key === v.stage)?.label}: ${opp?.title ?? 'opportunity'}`, payload: { stage: v.stage } })))
     revalidatePath('/pipeline')
     return { previous: cur.pipeline_stage as string | null }
   })
