@@ -11,7 +11,7 @@ export const PricingSaveSchema = z.object({
 
 const list = z.array(z.string().trim().min(1).max(100)).max(100)
 export const SupplierSchema = z.object({
-  name: z.string().trim().min(1).max(200), website: z.string().trim().max(300).optional().or(z.literal('')),
+  name: z.string().trim().min(1).max(200), website: z.string().trim().max(300).nullable().optional().or(z.literal('')),
   contact: z.object({ name: z.string().max(200).optional(), email: z.string().max(200).optional(), phone: z.string().max(60).optional() }).default({}),
   categories: list.default([]), products: list.default([]), status: z.enum(['manufacturer', 'authorized_distributor', 'reseller']).nullable().default(null),
   lead_time_days: z.number().int().min(0).max(3650).nullable().default(null), certifications: list.default([]), country_of_origin: z.string().max(100).nullable().default(null),

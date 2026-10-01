@@ -162,3 +162,4 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin 1s linear infinite; }
+@media (max-width: 767px) { .fp-settings { grid-template-columns: 1fr !important; } .fp-settings > nav { display: flex !important; overflow-x: auto; } }
