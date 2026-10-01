@@ -53,7 +53,7 @@ class MemStore implements SyncStore {
   last: Date | null = null
   finalized = 0
   targets = { naics: [] as string[], agencies: [] as string[] }
-  async callsUsedSince() { return this.used }
+  async callsUsedSince() { return this.used + this.runs.reduce((n, r) => n + r.calls_used, 0) }
   async lastSuccessfulSync() { return this.last }
   async getResumableRun() { return this.runs.find((r) => r.cursor && r.cursor.tasks.length) ?? null }
   async createRun(init: { cursor: Cursor }) {
@@ -65,7 +65,6 @@ class MemStore implements SyncStore {
     const r = this.runs.find((x) => x.id === id)!
     Object.assign(r, patch)
     if (patch.status === 'complete') this.last = NOW
-    this.used += (patch.calls_used ?? 0) - 0
   }
   async getTargets() { return this.targets }
   async getExisting(ids: string[]) {

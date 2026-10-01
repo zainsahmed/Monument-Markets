@@ -129,6 +129,8 @@ export async function runSamSync(client: SamClient, store: SyncStore, cfg: SyncC
       inserted += r.inserted
       updated += r.updated
       if ((task.page + 1) * SAM_MAX_LIMIT < res.totalRecords) queue.unshift({ ncode: task.ncode, page: task.page + 1 })
+      // live progress for the onboarding/sync progress view and for crash-safe quota accounting
+      await store.updateRun(run.id, { calls_used: calls, found, inserted, updated, cursor: { ...cursor, tasks: queue } })
     } catch (e) {
       if (e instanceof SamQuotaError) {
         calls++ // the rejected call still counts against the key
