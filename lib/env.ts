@@ -18,9 +18,11 @@ const serverSchema = z.object({
   APP_URL: z.url().default('http://localhost:3000'),
   SAM_DAILY_QUOTA: z.coerce.number().int().min(1).max(100000).default(10),
   SAM_RESERVED_CALLS: z.coerce.number().int().min(0).max(1000).default(2),
-  AI_MODEL_BRIEF: z.string().default('claude-sonnet-5-5'),
-  AI_MODEL_EXTRACT: z.string().default('claude-sonnet-5-5'),
-  AI_MODEL_SEARCH: z.string().default('claude-haiku-4-5-20251001'),
+  AI_MODEL_BRIEF: z.string().default('claude-opus-5-5'),
+  AI_MODEL_EXTRACT: z.string().default('claude-opus-5-5'),
+  AI_MODEL_SEARCH: z.string().default('claude-opus-5-5'),
+  AI_EFFORT: z.enum(['low', 'medium', 'high', 'xhigh', 'max']).default('high'),
+  AI_REFUSAL_FALLBACK: z.enum(['on', 'off']).default('on'),
 })
 
 export type ServerEnv = z.infer<typeof serverSchema>
