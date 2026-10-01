@@ -104,7 +104,7 @@ export function DetailView({ d, role, descriptionHtml, userId, minMargin }: { d:
         {tab === 'historical' && <HistoricalTab d={d} canWrite={canWrite} />}
         {tab === 'suppliers' && <SuppliersTab d={d} role={role} />}
         {tab === 'pricing' && <PricingTab d={d} role={role} minMargin={minMargin} />}
-        {tab === 'checklist' && <ChecklistTab d={d} canWrite={canWrite} docNames={docNames} />}
+        {tab === 'checklist' && <ChecklistTab key={d.checklist.map((i) => `${i.id}:${i.status}:${i.ai_suggestion?.status ?? ''}`).join('|')} d={d} canWrite={canWrite} docNames={docNames} />}
         {tab === 'notes' && <NotesTab d={d} canWrite={canWrite} userId={userId} />}
         {tab === 'activity' && <ActivityTab d={d} />}
       </section>

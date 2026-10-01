@@ -18,11 +18,12 @@ export const getSession = cache(async (): Promise<Session | null> => {
   const { data: userData } = await supabase.auth.getUser()
   const user = userData.user
   if (!user) return null
-  const { data: members } = await supabase.from('company_members').select('company_id, role, created_at').order('created_at', { ascending: true })
+  // RLS lets a user read every membership row of their company, so filter to their OWN row explicitly.
+  const { data: members } = await supabase.from('company_members').select('company_id, role, created_at').eq('user_id', user.id).order('created_at', { ascending: true })
   let member: { company_id: string; role: string } | undefined = members?.[0]
   if (!member) {
     await supabase.rpc('accept_invites')
-    const retry = await supabase.from('company_members').select('company_id, role').order('created_at', { ascending: true })
+    const retry = await supabase.from('company_members').select('company_id, role').eq('user_id', user.id).order('created_at', { ascending: true })
     member = retry.data?.[0]
   }
   if (!member) return { supabase, user: { id: user.id, email: user.email ?? null }, companyId: '', role: 'viewer', company: null as unknown as Company }
