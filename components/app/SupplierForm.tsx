@@ -14,6 +14,10 @@ type F = z.infer<typeof FormSchema>
 const list = (s: string) => s.split(/[,\n]/).map((x) => x.trim()).filter(Boolean)
 export type SupplierRow = { id?: string; name: string; website: string | null; contact: { name?: string; email?: string; phone?: string }; categories: string[]; products: string[]; status: string | null; lead_time_days: number | null; certifications: string[]; country_of_origin: string | null; coverage: string | null; notes: string | null }
 
+function Field({ id, label, err, children }: { id: string; label: string; err?: string; children: React.ReactNode }) {
+  return <div><label className="field-label" htmlFor={id}>{label}</label>{children}{err && <p className="field-error" role="alert">{err}</p>}</div>
+}
+
 export function SupplierForm({ s, onDone }: { s?: SupplierRow; onDone: (id: string) => void }) {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<F>({ resolver: zodResolver(FormSchema), defaultValues: { name: s?.name ?? '', website: s?.website ?? '', contactName: s?.contact?.name ?? '', contactEmail: s?.contact?.email ?? '', contactPhone: s?.contact?.phone ?? '', categories: (s?.categories ?? []).join(', '), products: (s?.products ?? []).join(', '), status: (s?.status as F['status']) ?? '', lead: s?.lead_time_days != null ? String(s.lead_time_days) : '', certifications: (s?.certifications ?? []).join(', '), origin: s?.country_of_origin ?? '', coverage: s?.coverage ?? '', notes: s?.notes ?? '' } })
   const { toast } = useToast()
@@ -24,7 +28,6 @@ export function SupplierForm({ s, onDone }: { s?: SupplierRow; onDone: (id: stri
     if (!r.ok) return toast(r.error, { error: true })
     toast('Supplier saved'); router.refresh(); onDone(r.data.id)
   }
-  const Field = ({ id, label, err, children }: { id: string; label: string; err?: string; children: React.ReactNode }) => <div><label className="field-label" htmlFor={id}>{label}</label>{children}{err && <p className="field-error" role="alert">{err}</p>}</div>
   return (
     <form onSubmit={handleSubmit(submit)} noValidate style={{ display: 'grid', gap: 12 }}>
       <Field id="sn" label="Company name" err={errors.name?.message}><input id="sn" className="input" aria-invalid={!!errors.name} {...register('name')} /></Field>

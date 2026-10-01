@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": { "baseUrl": "../..", "paths": { "@/*": ["./*"], "server-only": ["tests/stubs/server-only.ts"] }, "plugins": [] },
+  "include": ["./**/*.ts", "../fixtures/**/*.ts", "../stubs/**/*.ts"]
+}

@@ -21,6 +21,7 @@ const csp = [
 ].join('; ')
 
 const nextConfig: NextConfig = {
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   poweredByHeader: false,
   serverExternalPackages: ['pdfjs-dist'],
   async headers() {

@@ -1,7 +1,7 @@
 -- Minimal stand-in for the parts of Supabase that migrations/RLS depend on.
 -- Used ONLY for local testing against plain Postgres; real Supabase provides all of this.
 create schema if not exists auth;
-create table if not exists auth.users (id uuid primary key default gen_random_uuid(), email text unique);
+create table if not exists auth.users (id uuid primary key default gen_random_uuid(), email text unique, created_at timestamptz not null default now());
 create or replace function auth.uid() returns uuid language sql stable as $$
   select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
 $$;

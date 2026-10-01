@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 /** Dashboard number that ticks smoothly to its new value (instant under reduced motion). */
-export function Metric({ label, value, format, sub, href }: { label: string; value: number; format?: 'number' | 'money'; sub?: string; href?: string }) {
+export function Metric({ label, value, format, sub, href, unknown }: { label: string; value: number; format?: 'number' | 'money'; sub?: string; href?: string; unknown?: boolean }) {
   const [shown, setShown] = useState(value)
   const from = useRef(value)
   useEffect(() => {
@@ -19,7 +19,7 @@ export function Metric({ label, value, format, sub, href }: { label: string; val
     raf = requestAnimationFrame(step)
     return () => cancelAnimationFrame(raf)
   }, [value])
-  const text = format === 'money' ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: shown >= 1_000_000 ? 'compact' : 'standard', maximumFractionDigits: shown >= 1_000_000 ? 1 : 0 }).format(shown) : shown.toLocaleString('en-US')
+  const text = unknown ? 'Unknown' : format === 'money' ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: shown >= 1_000_000 ? 'compact' : 'standard', maximumFractionDigits: shown >= 1_000_000 ? 1 : 0 }).format(shown) : shown.toLocaleString('en-US')
   const body = (
     <>
       <div className="t-subheadline" style={{ color: 'var(--label-secondary)' }}>{label}</div>

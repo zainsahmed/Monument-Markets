@@ -44,3 +44,5 @@ next-env.d.ts
 # local test db / artifacts
 /test-results/
 /playwright-report/
+.next-qa/
+/tests/qa/.data/

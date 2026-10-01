@@ -9,6 +9,12 @@ import type { Company } from '@/lib/db-types'
 const NAICS_HINT = '336413 Other aircraft parts · 332710 Machine shops · 541330 Engineering services · 423840 Industrial supplies wholesale'
 const splitList = (s: string) => s.split(/[,\n]/).map((x) => x.trim()).filter(Boolean)
 
+function Status({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{ok ? <Check size={16} color="var(--green)" aria-hidden /> : <X size={16} color="var(--red)" aria-hidden />}<span>{label}</span><span className="t-footnote" style={{ marginLeft: 'auto', color: 'var(--label-secondary)' }}>{ok ? 'Configured on the server' : 'Not set'}</span></li>
+  )
+}
+
 export function Onboarding({ hasCompany, company, keys, role }: { hasCompany: boolean; company: Company | null; keys: { sam: boolean; anthropic: boolean; email: boolean }; role: string }) {
   const [step, setStep] = useState(hasCompany ? 2 : 1)
   const [pending, start] = useTransition()
@@ -46,9 +52,7 @@ export function Onboarding({ hasCompany, company, keys, role }: { hasCompany: bo
   }
   const finish = () => start(async () => { await finishOnboarding(); router.push('/dashboard'); router.refresh() })
 
-  const Status = ({ ok, label }: { ok: boolean; label: string }) => (
-    <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{ok ? <Check size={16} color="var(--green)" aria-hidden /> : <X size={16} color="var(--red)" aria-hidden />}<span>{label}</span><span className="t-footnote" style={{ marginLeft: 'auto', color: 'var(--label-secondary)' }}>{ok ? 'Configured on the server' : 'Not set'}</span></li>
-  )
+
 
   return (
     <div className="card anim-sheet" style={{ padding: 32 }}>

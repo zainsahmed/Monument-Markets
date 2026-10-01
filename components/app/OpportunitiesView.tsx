@@ -28,7 +28,7 @@ import { useKeyAction } from './keys'
 import { useMedia } from './useMedia'
 
 type ColId = 'label' | 'title' | 'agency' | 'type' | 'naics' | 'psc' | 'setaside' | 'place' | 'posted' | 'deadline' | 'docs' | 'fit' | 'stage'
-const DEFAULT_COLS: Record<ColId, boolean> = { label: true, title: true, agency: true, type: true, naics: true, psc: true, setaside: true, place: true, posted: true, deadline: true, docs: true, fit: true, stage: true }
+const DEFAULT_COLS: Record<ColId, boolean> = { label: true, title: true, agency: true, type: true, naics: true, psc: false, setaside: false, place: false, posted: false, deadline: true, docs: true, fit: true, stage: true }
 const COL_LABEL: Record<ColId, string> = { label: 'Label', title: 'Title', agency: 'Agency', type: 'Notice type', naics: 'NAICS', psc: 'PSC', setaside: 'Set-aside', place: 'Place of performance', posted: 'Posted', deadline: 'Deadline', docs: 'Docs', fit: 'AI fit', stage: 'Stage' }
 const SORTABLE: Partial<Record<ColId, SortKey>> = { title: 'title', agency: 'agency', naics: 'naics', posted: 'posted', deadline: 'deadline' }
 const stageLabel = (k: string | null) => PIPELINE_STAGES.find((s) => s.key === k)?.label ?? '—'
@@ -142,7 +142,7 @@ export function OpportunitiesView({ initial, filters: initialFilters, savedOnly,
   const cell = (o: OppRow, c: ColId) => {
     switch (c) {
       case 'label': return <ColorPill label={o.color_label} />
-      case 'title': return <Link href={`/opportunities/${o.id}`} tabIndex={-1} style={{ color: 'var(--label-primary)', fontWeight: 500 }}>{o.co?.saved && <Bookmark size={12} fill="currentColor" style={{ color: 'var(--accent)', marginRight: 6 }} aria-label="Saved" />}{o.title}</Link>
+      case 'title': return <Link href={`/opportunities/${o.id}`} tabIndex={-1} title={o.title} style={{ color: 'var(--label-primary)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>{o.co?.saved && <Bookmark size={12} fill="currentColor" style={{ color: 'var(--accent)', flex: 'none' }} aria-label="Saved" />}<span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.title}</span></Link>
       case 'agency': return orUnknown(o.sub_tier ?? o.department)
       case 'type': return orUnknown(o.notice_type ?? NOTICE_LABELS[o.notice_type_code ?? ''])
       case 'naics': return <span className="num">{orUnknown(o.naics)}</span>
@@ -156,7 +156,7 @@ export function OpportunitiesView({ initial, filters: initialFilters, savedOnly,
       case 'stage': return stageLabel(o.co?.pipeline_stage ?? null)
     }
   }
-  const widths: Record<ColId, number> = { label: 130, title: 360, agency: 200, type: 190, naics: 90, psc: 70, setaside: 90, place: 150, posted: 110, deadline: 110, docs: 60, fit: 90, stage: 110 }
+  const widths: Record<ColId, number> = { label: 150, title: 360, agency: 200, type: 190, naics: 90, psc: 70, setaside: 90, place: 150, posted: 110, deadline: 110, docs: 60, fit: 90, stage: 110 }
   const visibleCols = (Object.keys(COL_LABEL) as ColId[]).filter((c) => cols[c])
   const total = q.data?.pages[0]?.total
   const showInspector = inspect && !tablet && view === 'table' && !!cur
@@ -168,12 +168,12 @@ export function OpportunitiesView({ initial, filters: initialFilters, savedOnly,
         <Seg label="Opportunity set" value={filters.tab} onChange={(t) => apply({ ...filters, tab: t })} options={tabs} />
         <Seg label="Source" value={filters.source ?? 'ALL'} onChange={(s) => apply({ ...filters, source: s === 'ALL' ? undefined : (s as 'SAM' | 'DIBBS') })} options={[{ value: 'ALL', label: 'All sources' }, { value: 'SAM', label: 'SAM' }, { value: 'DIBBS', label: 'DIBBS' }]} />
         <div style={{ flex: 1 }} />
-        <input className="input" style={{ width: 240 }} type="search" placeholder="Keywords…" aria-label="Keyword search" defaultValue={filters.q ?? ''} onKeyDown={(e) => { if (e.key === 'Enter') apply({ ...filters, q: (e.target as HTMLInputElement).value.trim() || undefined }) }} />
+        <input className="input" style={{ width: 200 }} type="search" placeholder="Keywords…" aria-label="Keyword search" defaultValue={filters.q ?? ''} onKeyDown={(e) => { if (e.key === 'Enter') apply({ ...filters, q: (e.target as HTMLInputElement).value.trim() || undefined }) }} />
         <Button onClick={() => setAiOpen(true)}><Sparkles size={14} aria-hidden />AI search</Button>
-        <Button onClick={() => setSaveOpen(true)}><Bookmark size={14} aria-hidden />Save search</Button>
       </div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 200 }}><FilterBar filters={filters} onChange={apply} /></div>
+        <Button small onClick={() => setSaveOpen(true)}><Bookmark size={14} aria-hidden />Save search</Button>
         <span className="t-footnote num" style={{ color: 'var(--label-secondary)' }} aria-live="polite">{q.isLoading ? 'Loading…' : `${rows.length.toLocaleString()}${total && total > rows.length ? ` of ${total.toLocaleString()}` : ''} opportunities`}</span>
         {!mobile && <Seg label="View" value={view} onChange={setV} options={[{ value: 'table', label: 'Table' }, { value: 'card', label: 'Cards' }]} />}
         {!mobile && view === 'table' && <>

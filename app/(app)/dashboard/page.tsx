@@ -64,12 +64,12 @@ export default async function Dashboard() {
       )}
       {status.lastError && <div role="alert" className="card" style={{ padding: 12, marginBottom: 16, color: 'var(--red)' }}>Last sync failed: {status.lastError}</div>}
 
-      <section aria-label="Key numbers" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 24 }}>
+      <section aria-label="Key numbers" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(168px, 1fr))', gap: 12, marginBottom: 24 }}>
         <Metric label="Opportunities found" value={found} sub="returned by SAM.gov, 30 days" />
         <Metric label="After filtering" value={afterFilter} sub="stored for your NAICS codes" href="/opportunities?tab=all" />
         <Metric label="Needs review" value={needsReview} href="/pipeline" />
         <Metric label="Being pursued" value={m.beingPursued} href="/pipeline" />
-        <Metric label="Potential value" value={m.potentialValue} format="money" sub={m.unknownValueCount ? `+ ${m.unknownValueCount} unknown` : 'all values known'} />
+        <Metric label="Potential value" value={m.potentialValue} format="money" unknown={m.potentialValue === 0 && m.unknownValueCount > 0} sub={m.unknownValueCount ? `+ ${m.unknownValueCount} unknown` : 'all values known'} />
         <Metric label="Deadlines in 7 days" value={m.deadlines7} href="/opportunities?saved=1" />
       </section>
 
@@ -128,7 +128,7 @@ function Timeline({ dots, now }: { dots: Array<{ id: string; title: string; dead
     <div style={{ overflowX: 'auto' }}>
       <svg viewBox={`0 0 ${W} ${H}`} role="group" aria-label="Deadline strip" style={{ width: '100%', minWidth: 560, height: 'auto', display: 'block' }}>
         <line x1={pad} x2={W - pad} y1={44} y2={44} stroke="var(--separator)" strokeWidth={1} />
-        {[0, 7, 14, 21, 28].map((d) => <g key={d}><line x1={pad + (d / 30) * (W - pad * 2)} x2={pad + (d / 30) * (W - pad * 2)} y1={40} y2={48} stroke="var(--label-tertiary)" /><text x={pad + (d / 30) * (W - pad * 2)} y={66} fontSize={11} textAnchor="middle" fill="var(--label-secondary)">{d === 0 ? 'Today' : fmtDate(new Date(now.getTime() + d * 864e5).toISOString().slice(0, 10)).replace(/, \d{4}/, '')}</text></g>)}
+        {[0, 7, 14, 21, 28].map((d) => <g key={d}><line x1={pad + (d / 30) * (W - pad * 2)} x2={pad + (d / 30) * (W - pad * 2)} y1={40} y2={48} stroke="var(--label-tertiary)" /><text x={pad + (d / 30) * (W - pad * 2)} y={66} fontSize={11} textAnchor={d === 0 ? 'start' : 'middle'} fill="var(--label-secondary)">{d === 0 ? 'Today' : fmtDate(new Date(now.getTime() + d * 864e5).toISOString().slice(0, 10)).replace(/, \d{4}/, '')}</text></g>)}
         {dots.map((d) => {
           const days = daysLeft(d.deadline, now)!
           const key = Math.round(x(d.deadline) / 6)
