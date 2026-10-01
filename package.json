@@ -10,7 +10,7 @@
     "predev": "tsx scripts/gen-tokens.ts",
     "prebuild": "tsx scripts/gen-tokens.ts",
     "postbuild": "tsx scripts/check-secrets.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "db:test:start": "scripts/test-db.sh start",

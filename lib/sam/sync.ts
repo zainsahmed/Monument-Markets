@@ -82,11 +82,17 @@ export async function runSamSync(client: SamClient, store: SyncStore, cfg: SyncC
   }
 
   const targets = await store.getTargets()
+  if (targets.naics.length === 0) {
+    // Without any configured NAICS a sweep would store every notice SAM returns. Make the user configure a profile first.
+    return { status: 'skipped', callsUsed: 0, found: 0, inserted: 0, updated: 0, errors: [{ kind: 'config', message: 'No company has NAICS codes configured; sync skipped.' }], nextAllowedAt: null, runId: null }
+  }
   let run: RunRecord
   let cursor: Cursor
   if (resumable?.cursor && resumable.cursor.tasks.length > 0) {
-    run = resumable
+    // One sync_runs row per invocation keeps daily quota accounting exact; the cursor moves to the new row.
     cursor = resumable.cursor
+    run = await store.createRun({ windowFrom: cursor.window.from.slice(0, 10), windowTo: cursor.window.to.slice(0, 10), cursor })
+    await store.updateRun(resumable.id, { cursor: null })
   } else {
     const win = planWindow({ lastSuccessfulSyncAt: await store.lastSuccessfulSync(), now })
     const plan = planTasks(targets.naics, available)
@@ -95,8 +101,8 @@ export async function runSamSync(client: SamClient, store: SyncStore, cfg: SyncC
   }
 
   let calls = 0
-  let found = run.found, inserted = run.inserted, updated = run.updated
-  const errors: unknown[] = [...run.errors]
+  let found = 0, inserted = 0, updated = 0
+  const errors: unknown[] = []
   let status: SyncResult['status'] = 'complete'
   let nextAllowedAt: Date | null = null
   const queue = [...cursor.tasks]
@@ -146,7 +152,7 @@ export async function runSamSync(client: SamClient, store: SyncStore, cfg: SyncC
   if (remaining && status === 'complete') status = 'partial'
   const finished = !remaining
   await store.updateRun(run.id, {
-    calls_used: run.calls_used + calls,
+    calls_used: calls,
     found, inserted, updated, errors,
     status: finished ? (status === 'error' ? 'complete' : status) : status,
     finished_at: finished ? now.toISOString() : null,

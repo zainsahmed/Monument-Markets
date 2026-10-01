@@ -44,6 +44,7 @@ class FakeClient implements SamClient {
 }
 
 class MemStore implements SyncStore {
+  constructor() { this.targets = { naics: ['336413'], agencies: [] } }
   rows = new Map<string, ExistingOpportunity & NormalizedOpportunity>()
   amendments: Array<{ field: string; opportunity_id: string }> = []
   changed: Array<{ id: string; fields: string[] }> = []
@@ -256,14 +257,25 @@ describe('runSamSync', () => {
     const r2 = await runSamSync(client2, store, { ...cfg, now: new Date('2026-10-02T01:00:00Z') })
     expect(client2.calls.map((c) => c.ncode)).toEqual(['541330'])
     expect(r2.status).toBe('complete')
-    expect(store.runs).toHaveLength(1)
+    expect(store.runs).toHaveLength(2) // one row per invocation; cursor moved to the new row
+    expect(store.runs[0].cursor).toBeNull()
+  })
+
+  it('skips (spends no calls) when no company has NAICS codes configured', async () => {
+    const store = new MemStore()
+    store.targets = { naics: [], agencies: [] }
+    const client = new FakeClient(() => ({ total: 0, items: [] }))
+    expect((await runSamSync(client, store, cfg)).status).toBe('skipped')
+    expect(client.calls).toHaveLength(0)
   })
 
   it('retries a failing task up to three times, then drops it', async () => {
     const store = new MemStore()
     const client = new FakeClient(() => new Error('boom'))
     for (let i = 0; i < 3; i++) await runSamSync(client, store, cfg)
-    expect(store.runs[0].cursor === null || store.runs[0].cursor.tasks.length === 0).toBe(true)
-    expect(store.runs[0].errors).toHaveLength(3)
+    const last = store.runs[store.runs.length - 1]
+    expect(last.cursor === null || last.cursor.tasks.length === 0).toBe(true)
+    expect(store.runs.flatMap((r) => r.errors)).toHaveLength(3)
+    expect(client.calls).toHaveLength(3)
   })
 })
