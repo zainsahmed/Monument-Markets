@@ -156,7 +156,7 @@ export function OpportunitiesView({ initial, filters: initialFilters, savedOnly,
       case 'stage': return stageLabel(o.co?.pipeline_stage ?? null)
     }
   }
-  const widths: Record<ColId, number> = { label: 150, title: 360, agency: 200, type: 190, naics: 90, psc: 70, setaside: 90, place: 150, posted: 110, deadline: 110, docs: 60, fit: 90, stage: 110 }
+  const widths: Record<ColId, number> = { label: 172, title: 360, agency: 200, type: 190, naics: 90, psc: 70, setaside: 90, place: 150, posted: 110, deadline: 110, docs: 60, fit: 90, stage: 110 }
   const visibleCols = (Object.keys(COL_LABEL) as ColId[]).filter((c) => cols[c])
   const total = q.data?.pages[0]?.total
   const showInspector = inspect && !tablet && view === 'table' && !!cur

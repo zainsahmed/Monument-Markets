@@ -7,7 +7,13 @@ import { createHmac, randomBytes, randomUUID, scryptSync, timingSafeEqual } from
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
 import path from 'node:path'
-import { Pool } from 'pg'
+import { Pool, types } from 'pg'
+
+// PostgREST returns DATE columns as 'YYYY-MM-DD' strings (node-pg would parse them into JS Dates).
+types.setTypeParser(1082, (v) => v)
+// …and NUMERIC / BIGINT as JSON numbers (node-pg returns strings).
+types.setTypeParser(1700, (v) => parseFloat(v))
+types.setTypeParser(20, (v) => parseInt(v, 10))
 import { Rest, RestError } from './postgrest'
 
 const PORT = Number(process.env.QA_SHIM_PORT ?? 54400)

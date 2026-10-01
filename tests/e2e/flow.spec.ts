@@ -1,0 +1,222 @@
+import { expect, test, type Page } from '@playwright/test'
+
+const PW = 'qa-password-123'
+async function login(page: Page, email: string) {
+  await page.goto('/sign-in')
+  await page.fill('#email', email)
+  await page.fill('#password', PW)
+  await page.click('button[type=submit]')
+  await page.waitForURL('**/dashboard')
+}
+const toast = (page: Page) => page.getByRole('status').filter({ hasText: /.+/ })
+
+test.describe.configure({ mode: 'serial' })
+
+test.describe('sign in → profile → sync → filter → detail → analyze → checklist → supplier/quote → price → pipeline → alert', () => {
+  let page: Page
+  test.beforeAll(async ({ browser }) => { page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage() })
+  test.afterAll(async () => { await page.context().close() })
+
+  test('sign in rejects a bad password and accepts the right one', async () => {
+    await page.goto('/sign-in')
+    await page.fill('#email', 'owner@qa.test'); await page.fill('#password', 'wrong-password-1')
+    await page.click('button[type=submit]')
+    await expect(page.getByText('Invalid login credentials')).toBeVisible()
+    await login(page, 'owner@qa.test')
+    await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
+    await expect(page.getByText(/10 of 10 API calls left today/)).toBeVisible()
+  })
+
+  test('unauthenticated users are sent to sign-in and cron routes need the secret', async ({ browser, request }) => {
+    const ctx = await browser.newContext(); const p = await ctx.newPage()
+    await p.goto('/opportunities'); await expect(p).toHaveURL(/sign-in/)
+    await ctx.close()
+    expect((await request.post('/api/cron/sync-sam')).status()).toBe(401)
+    expect((await request.post('/api/cron/alerts', { headers: { authorization: 'Bearer wrong' } })).status()).toBe(401)
+  })
+
+  test('company profile edit persists', async () => {
+    await page.goto('/company')
+    await expect(page.getByLabel('Company name')).toHaveValue('QA Aerospace Components')
+    await page.getByRole('button', { name: 'Defense compliance' }).click()
+    await page.getByLabel('SPRS score', { exact: true }).fill('92')
+    await page.getByRole('button', { name: 'Contract size & margin' }).click()
+    await page.getByLabel('Minimum gross margin (%)').fill('18')
+    await page.getByRole('button', { name: 'Save profile' }).click()
+    await expect(page.getByText('Profile saved')).toBeVisible()
+    await page.reload()
+    await page.getByRole('button', { name: 'Contract size & margin' }).click()
+    await expect(page.getByLabel('Minimum gross margin (%)')).toHaveValue('18')
+  })
+
+  test('sync pulls notices per NAICS within the quota and records the run', async () => {
+    await page.goto('/settings')
+    await page.getByRole('button', { name: 'Data sync' }).click()
+    await page.getByRole('button', { name: 'Sync now' }).click()
+    await expect(page.getByText(/Sync complete: 4 new, 0 updated, 3 calls/)).toBeVisible({ timeout: 60_000 })
+    await page.goto('/dashboard')
+    await expect(page.getByText(/7 of 10 API calls left today/)).toBeVisible()
+    // a second sync the same day only uses the remaining non-reserved budget and finds nothing new
+    await page.goto('/settings'); await page.getByRole('button', { name: 'Data sync' }).click()
+    await page.getByRole('button', { name: 'Sync now' }).click()
+    await expect(page.getByText(/Sync complete: 0 new, 0 updated, 3 calls/)).toBeVisible({ timeout: 60_000 })
+  })
+
+  test('filter the list by NAICS and notice type, then clear', async () => {
+    await page.goto('/opportunities?tab=all')
+    await expect(page.getByRole('grid')).toContainText('Servo valve assembly')
+    await page.getByRole('button', { name: 'Filter', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'NAICS' }).click()
+    await page.getByLabel('Values').fill('332710')
+    await page.getByRole('button', { name: 'Apply' }).click()
+    await expect(page.getByText('NAICS:')).toBeVisible()
+    await expect(page.getByRole('grid')).toContainText('Machined titanium fitting')
+    await expect(page.getByRole('grid')).not.toContainText('Servo valve assembly')
+    await expect(page.getByText('Watch').first()).toBeVisible()
+    await page.getByRole('button', { name: 'Remove NAICS filter' }).click()
+    await expect(page.getByRole('grid')).toContainText('Servo valve assembly')
+  })
+
+  test('keyword search covers extracted document text and the AI search returns editable filters only', async () => {
+    await page.goto('/opportunities?tab=all')
+    await page.getByLabel('Keyword search').fill('hydraulic'); await page.keyboard.press('Enter')
+    await expect(page.getByRole('grid')).toContainText('Hydraulic pump assembly')
+    await page.getByRole('button', { name: 'AI search' }).click()
+    await page.getByLabel('Search request').fill('Active DoD pump solicitations under $500,000 in Alabama things we could realistically source')
+    await page.getByRole('button', { name: 'Make filters' }).click()
+    await expect(page.getByText('Couldn’t turn into a filter')).toBeVisible()
+    await expect(page.getByText('things we could realistically source').first()).toBeVisible()
+    await page.getByRole('button', { name: 'Apply and edit' }).click()
+    await expect(page.getByText('Value:')).toBeVisible()
+    await expect(page.getByText('< $500,000')).toBeVisible()
+  })
+
+  test('open a synced notice, fetch its description + attachment, and read it in the viewer', async () => {
+    await page.goto('/opportunities?tab=all')
+    await page.getByRole('link', { name: /Servo valve assembly/ }).first().click()
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Servo valve assembly')
+    await expect(page.getByText('Internal workflow status — not a recommendation to bid.')).toBeVisible()
+    await expect(page.getByText(/hasn’t been retrieved from SAM.gov yet/)).toBeVisible()
+    await page.getByRole('tab', { name: 'Documents' }).click()
+    await page.getByRole('button', { name: 'Fetch from SAM.gov' }).click()
+    await expect(page.getByText(/Fetched description and 1 file/)).toBeVisible({ timeout: 60_000 })
+    await expect(page.getByRole('list', { name: 'Documents' })).toContainText('Solicitation_W58RGZ-26-Q-201.pdf')
+    await expect(page.getByRole('list', { name: 'Documents' })).toContainText('Parsed')
+    await page.getByRole('button', { name: /View/ }).first().click()
+    await expect(page.getByRole('region', { name: /Viewer/ })).toBeVisible()
+    await page.getByRole('button', { name: 'Text view' }).click()
+    await expect(page.getByRole('region', { name: /Viewer/ })).toContainText('First article testing is required')
+    await page.getByRole('tab', { name: 'Overview' }).click()
+    await expect(page.getByText(/Fake description for fake-336413-1/)).toBeVisible()
+  })
+
+  test('analyze: cited, labelled brief; fabricated citation is rejected and downgraded; checklist stays UNKNOWN until the user accepts', async () => {
+    await page.getByRole('tab', { name: 'AI Analysis' }).click()
+    await expect(page.getByText('No Pursuit Brief yet')).toBeVisible()
+    await page.getByRole('button', { name: 'Analyze', exact: true }).click()
+    await expect(page.getByText('Supplier, quote and pricing data are')).toBeVisible()
+    await page.getByRole('button', { name: 'Run analysis' }).click()
+    await expect(page.getByRole('heading', { name: /What they want/ })).toBeVisible({ timeout: 60_000 })
+    // every statement carries a label chip; the deliberately fabricated "top secret" citation was removed
+    await expect(page.getByText('Verified', { exact: true }).first()).toBeVisible()
+    await expect(page.getByText('AI analysis', { exact: true }).first()).toBeVisible()
+    await expect(page.getByText(/citations checked, [1-9]\d* rejected/)).toBeVisible()
+    await expect(page.getByText('Top secret clearance is required (this citation is deliberately wrong).')).toBeVisible()
+    const flagged = page.locator('p', { hasText: 'Top secret clearance is required' }).locator('xpath=..')
+    await expect(flagged).toContainText('Needs verification')
+    await expect(page.getByText('Not mentioned').first()).toBeVisible()
+    // citation popover opens the viewer at the cited page
+    await page.locator('button.cite').first().click()
+    await expect(page.getByText(/Open in viewer|Open notice record/)).toBeVisible()
+    await page.keyboard.press('Escape')
+
+    await page.getByRole('tab', { name: 'Checklist' }).click()
+    const sam = page.locator('div.hairline-b', { hasText: 'SAM registration active' })
+    await expect(sam.getByRole('radio', { name: 'Unknown' })).toHaveAttribute('aria-checked', 'true') // AI suggested PASS, status untouched
+    await expect(sam).toContainText('AI suggests')
+    await expect(page.getByText(/items? unknown/).first()).toBeVisible()
+    await sam.getByRole('button', { name: 'Accept' }).click()
+    await expect(sam.getByRole('radio', { name: 'Pass' })).toHaveAttribute('aria-checked', 'true')
+    await page.locator('div.hairline-b', { hasText: 'Size standard satisfied' }).getByRole('radio', { name: 'Fail' }).click()
+    await expect(page.getByText(/1 failed — not ready\./)).toBeVisible()
+  })
+
+  test('supplier + quote, then the pricing calculator shows ESTIMATED until everything is entered and quoted', async () => {
+    await page.goto('/suppliers')
+    await page.getByRole('button', { name: 'New supplier' }).click()
+    await page.getByLabel('Company name').fill('Apex Valve Works')
+    await page.getByLabel('Contact email').fill('not-an-email')
+    await page.getByRole('button', { name: 'Add supplier' }).click()
+    await expect(page.getByText('Enter a valid email')).toBeVisible()
+    await page.getByLabel('Contact email').fill('sales@apexvalve.example')
+    await page.getByRole('button', { name: 'Add supplier' }).click()
+    await expect(page).toHaveURL(/\/suppliers\/[0-9a-f-]{36}/)
+
+    await page.goto('/opportunities?tab=all')
+    await page.getByRole('link', { name: /Servo valve assembly/ }).first().click()
+    await page.getByRole('tab', { name: 'Suppliers' }).click()
+    await page.getByLabel('Attach supplier').selectOption({ label: 'Apex Valve Works' })
+    await page.getByRole('button', { name: 'Attach' }).click()
+    await expect(page.getByText('Sourcing checklist for Apex Valve Works')).toBeVisible()
+    await page.getByLabel('Supplier', { exact: true }).selectOption({ label: 'Apex Valve Works' })
+    await page.getByLabel('Amount ($)').fill('9600')
+    const exp = new Date(Date.now() + 2 * 864e5).toISOString().slice(0, 10)
+    await page.getByLabel('Valid until').fill(exp)
+    await page.getByRole('button', { name: 'Add quote' }).click()
+    await expect(page.getByText('Quote added')).toBeVisible()
+    await expect(page.getByText('Expires before deadline')).toBeVisible() // quote validity ends before the offer deadline
+
+    await page.getByRole('tab', { name: 'Pricing' }).click()
+    await expect(page.getByText(/Enter at least one cost to see a result/)).toBeVisible() // no costs → no profitability shown
+    await page.getByLabel('Line 1 Unit product cost').fill('800')
+    await page.getByLabel('Line 1 Quantity').fill('12')
+    await page.getByLabel('Desired gross margin (%)').fill('20')
+    await expect(page.getByText('Estimated', { exact: true })).toBeVisible()
+    await expect(page.getByText(/Shipping is blank/)).toBeVisible()
+    for (const f of ['Shipping', 'Labor', 'Subcontractors', 'Travel', 'Insurance / bonding', 'Other costs']) await page.getByLabel(`Line 1 ${f}`).fill('0')
+    await expect(page.getByText(/isn't backed by a supplier quote/)).toBeVisible() // still estimated: unquoted
+    await page.getByLabel('Line 1 backing quote').selectOption({ index: 1 })
+    await expect(page.getByText('All inputs entered & quoted')).toBeVisible()
+    await expect(page.getByText('$9,600.00').first()).toBeVisible()
+    await expect(page.getByText('$12,000.00').first()).toBeVisible() // 9600 / (1 - 0.2)
+    await page.getByLabel('Target price ($) — solve for margin').fill('10000')
+    await expect(page.getByText(/below your minimum of 18\.0%/)).toBeVisible()
+    await page.getByLabel('Scenario name').fill('Aggressive')
+    await page.getByRole('button', { name: 'Save as new version' }).click()
+    await expect(page.getByText('Saved as version 1')).toBeVisible()
+  })
+
+  test('pipeline: add, drag-free move, Submitted needs a manual-confirmation note, Undo works', async () => {
+    await page.goto('/opportunities?tab=all')
+    const row = page.getByRole('row', { name: /Servo valve assembly/ })
+    await row.click()
+    await page.getByRole('button', { name: 'Add to pipeline' }).click()
+    await expect(page.getByText('Added to pipeline')).toBeVisible()
+    await page.goto('/pipeline')
+    const card = page.getByRole('article', { name: /Servo valve assembly/ })
+    await card.getByLabel(/Move .* to stage/).selectOption({ label: 'Move to: Pricing' })
+    await expect(page.getByRole('region', { name: /^Pricing/ })).toContainText('Servo valve assembly')
+    await page.getByRole('article', { name: /Servo valve assembly/ }).getByLabel(/Move .* to stage/).selectOption({ label: 'Move to: Submitted' })
+    await expect(page.getByText('Confirm submission')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Confirm I submitted this' })).toBeDisabled() // note is required
+    await page.getByLabel(/Submitted manually by you/).fill('Submitted via DIBBS portal at 2:10 PM')
+    await page.getByRole('button', { name: 'Confirm I submitted this' }).click()
+    await expect(page.getByRole('region', { name: /^Submitted/ })).toContainText('Servo valve assembly')
+    await page.getByText('Moved to Submitted').locator('xpath=..').getByRole('button', { name: 'Undo' }).click()
+    await expect(page.getByRole('region', { name: /^Pricing/ })).toContainText('Servo valve assembly')
+  })
+
+  test('alerts: the deadline cron creates a reminder that shows up (deduped on a second run) and can be read', async ({ request }) => {
+    const h = { authorization: 'Bearer qa-cron-secret-0123456789abcdef0123' }
+    const first = await (await request.post('/api/cron/alerts', { headers: h })).json()
+    expect(first.deadlines).toBeGreaterThan(0)
+    const second = await (await request.post('/api/cron/alerts', { headers: h })).json()
+    expect(second.deadlines).toBe(0)
+    await page.goto('/alerts')
+    await expect(page.getByRole('list', { name: 'Alerts' })).toContainText('Bearing, roller, spherical')
+    const unread = page.getByText(/\d+ unread/)
+    await expect(unread).toBeVisible()
+    await page.getByRole('button', { name: 'Mark all read' }).click()
+    await expect(page.getByText('0 unread')).toBeVisible()
+  })
+})

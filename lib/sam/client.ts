@@ -3,7 +3,8 @@ import { getEnv } from '@/lib/env'
 import { nextQuotaReset } from './plan'
 import type { SamSearchParams, SamSearchResponse } from './types'
 
-export const SAM_SEARCH_URL = 'https://api.sam.gov/opportunities/v2/search'
+/** Production endpoint per the official docs. SAM_SEARCH_URL exists only so tests can point at a local fake. */
+export const SAM_SEARCH_URL = process.env.SAM_SEARCH_URL ?? 'https://api.sam.gov/opportunities/v2/search'
 
 export class SamQuotaError extends Error {
   constructor(public nextAllowedAt: Date, message: string) {

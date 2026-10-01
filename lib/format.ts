@@ -26,8 +26,8 @@ export function countdownText(days: number | null): string {
   return days === 1 ? '1 day' : `${days} days`
 }
 
-export const fmtMoney = (n: number | null | undefined, opts: { compact?: boolean } = {}): string =>
-  n === null || n === undefined ? UNKNOWN : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: n >= 1000 || opts.compact ? 0 : 2, ...(opts.compact && n >= 1e6 ? { notation: 'compact', maximumFractionDigits: 1 } : {}) }).format(n)
+export const fmtMoney = (n: number | null | undefined, opts: { compact?: boolean; exact?: boolean } = {}): string =>
+  n === null || n === undefined ? UNKNOWN : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: opts.exact ? 2 : 0, maximumFractionDigits: opts.exact ? 2 : n >= 1000 || opts.compact ? 0 : 2, ...(opts.compact && n >= 1e6 ? { notation: 'compact', maximumFractionDigits: 1 } : {}) }).format(n)
 
 /** "Oct 5, 2026, 12:00 PM ET" in the viewer's zone; original zone offset noted when it differs. */
 export function fmtDeadline(iso: string | null, raw: string | null, tz?: string): string {

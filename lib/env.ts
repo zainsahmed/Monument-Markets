@@ -16,6 +16,7 @@ const serverSchema = z.object({
   // --- optional tuning ---
   EMAIL_FROM: z.string().default('Fieldpoint <alerts@example.com>'),
   APP_URL: z.url().default('http://localhost:3000'),
+  SAM_SEARCH_URL: z.url().optional(), // test-only override of the SAM.gov endpoint
   SAM_DAILY_QUOTA: z.coerce.number().int().min(1).max(100000).default(10),
   SAM_RESERVED_CALLS: z.coerce.number().int().min(0).max(1000).default(2),
   AI_MODEL_BRIEF: z.string().default('claude-opus-5-5'),

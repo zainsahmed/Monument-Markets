@@ -3,6 +3,7 @@ import path from 'node:path'
 import { Client } from 'pg'
 import { createTestDb } from '../db/helpers'
 import { startFakeAnthropic } from './fake-anthropic'
+import { startFakeSam } from './fake-sam'
 import { startShim } from './shim/server'
 import { seed } from './seed'
 
@@ -14,7 +15,8 @@ export async function startStack() {
   await (db.admin as Client).query('create table if not exists auth.qa_credentials (user_id uuid primary key references auth.users(id) on delete cascade, pw text not null)')
   const shim = await startShim()
   const llm = await startFakeAnthropic()
+  const sam = await startFakeSam()
   const seeded = await seed(shim.pool, shim.url)
-  return { shim, llm, db, seeded, close: async () => { llm.close(); await shim.close(); await db.admin.end() } }
+  return { shim, llm, db, seeded, close: async () => { llm.close(); sam.close(); await shim.close(); await db.admin.end() } }
 }
 if (process.argv[1]?.endsWith('stack.ts')) startStack().then((s) => console.log('QA stack up', s.shim.url, Object.keys(s.seeded.users)))

@@ -8,6 +8,7 @@ export const qaEnv = {
   SAM_API_KEY: 'qa-sam-key-not-real',
   ANTHROPIC_API_KEY: 'qa-anthropic-key-not-real',
   ANTHROPIC_BASE_URL: 'http://127.0.0.1:54401',
+  SAM_SEARCH_URL: 'http://127.0.0.1:54402/search',
   CRON_SECRET: 'qa-cron-secret-0123456789abcdef0123',
   RESEND_API_KEY: 'qa-resend-key-not-real',
   APP_URL: 'http://127.0.0.1:3100',

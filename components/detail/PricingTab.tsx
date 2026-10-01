@@ -45,7 +45,7 @@ export function PricingTab({ d, role, minMargin }: { d: DetailData; role: string
     toast(`Saved as version ${r.data.version}`); setLabel(''); router.refresh()
   }
   const unitInputs: Array<(typeof COST_FIELDS)[number]> = [...COST_FIELDS]
-  const money = (n: number | null) => (n === null ? '—' : fmtMoney(n))
+  const money = (n: number | null) => (n === null ? '—' : fmtMoney(n, { exact: true }))
   return (
     <div style={{ display: 'grid', gap: 16 }}>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>

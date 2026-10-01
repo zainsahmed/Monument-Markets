@@ -14,7 +14,10 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "db:test:start": "scripts/test-db.sh start",
-    "db:test:stop": "scripts/test-db.sh stop"
+    "db:test:stop": "scripts/test-db.sh stop",
+    "qa:up": "scripts/qa.sh up",
+    "qa:down": "scripts/qa.sh down",
+    "qa:screens": "tsx --tsconfig tests/qa/tsconfig.json tests/qa/screens.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
