@@ -249,7 +249,7 @@ describe('runSamSync', () => {
     expect(r.status).toBe('quota_exhausted')
     expect(r.nextAllowedAt).toEqual(next)
     expect(store.runs[0].cursor?.tasks).toEqual([{ ncode: '541330', page: 0 }])
-    expect(store.runs[0].status).toBe('quota_exhausted')
+    expect((store.runs[0] as RunRecord & { status?: string }).status).toBe('quota_exhausted')
     // resume next day picks up the remaining task, same window
     store.used = 0
     const client2 = new FakeClient(() => ({ total: 1, items: [sam('late', { naicsCode: '541330' })] }))

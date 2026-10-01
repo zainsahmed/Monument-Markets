@@ -33,6 +33,11 @@ const isoDate = (v: unknown): string | null => {
 }
 
 /** SAM `active` is "Yes"/"No". Unknown values are treated as active so we never hide a live notice. */
+function amountOf(v: unknown): number | null {
+  const n = typeof v === 'number' ? v : typeof v === 'string' ? Number(v.replace(/[$,\s]/g, '')) : NaN
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
 export function parseActive(v: unknown): boolean {
   if (typeof v === 'boolean') return v
   if (typeof v === 'string') return !/^(no|false|inactive|archived|cancelled|deleted)$/i.test(v.trim())
@@ -78,6 +83,7 @@ export function normaliseOpportunity(s: SamOpportunity, now = new Date()): Norma
     resource_links: Array.isArray(s.resourceLinks) ? s.resourceLinks.filter((x): x is string => typeof x === 'string') : [],
     ui_link: str(s.uiLink),
     award: s.award ?? null,
+    value_amount: amountOf(s.award?.amount),
     active,
     cancelled,
     raw: s,

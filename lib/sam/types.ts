@@ -78,6 +78,7 @@ export interface NormalizedOpportunity {
   resource_links: string[]
   ui_link: string | null
   award: unknown | null
+  value_amount: number | null
   active: boolean
   cancelled: boolean
   content_hash: string
