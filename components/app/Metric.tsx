@@ -23,7 +23,7 @@ export function Metric({ label, value, format, sub, href, unknown }: { label: st
   const body = (
     <>
       <div className="t-subheadline" style={{ color: 'var(--label-secondary)' }}>{label}</div>
-      <div className="t-metric" aria-label={`${label}: ${text}`}>{text}</div>
+      <div className={unknown ? 't-title1' : 't-metric'} style={unknown ? { minHeight: 44, display: 'flex', alignItems: 'center', color: 'var(--label-secondary)' } : undefined} aria-label={`${label}: ${text}`}>{text}</div>
       <div className="t-footnote" style={{ color: 'var(--label-secondary)', minHeight: 16 }}>{sub ?? ''}</div>
     </>
   )

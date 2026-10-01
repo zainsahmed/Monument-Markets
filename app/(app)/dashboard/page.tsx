@@ -69,7 +69,7 @@ export default async function Dashboard() {
         <Metric label="After filtering" value={afterFilter} sub="stored for your NAICS codes" href="/opportunities?tab=all" />
         <Metric label="Needs review" value={needsReview} href="/pipeline" />
         <Metric label="Being pursued" value={m.beingPursued} href="/pipeline" />
-        <Metric label="Potential value" value={m.potentialValue} format="money" unknown={m.potentialValue === 0 && m.unknownValueCount > 0} sub={m.unknownValueCount ? `+ ${m.unknownValueCount} unknown` : 'all values known'} />
+        <Metric label="Potential value" value={m.potentialValue} format="money" unknown={m.potentialValue === 0 && m.unknownValueCount > 0} sub={m.unknownValueCount ? (m.potentialValue > 0 ? `+ ${m.unknownValueCount} unknown` : `${m.unknownValueCount} with no stated value`) : 'all values known'} />
         <Metric label="Deadlines in 7 days" value={m.deadlines7} href="/opportunities?saved=1" />
       </section>
 

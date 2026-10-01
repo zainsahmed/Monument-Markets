@@ -52,7 +52,7 @@ function Nav({ counts, collapsed, onNavigate }: { counts: ShellCounts; collapsed
             return (
               <Link key={it.href} href={href} onClick={onNavigate} className="side-item" aria-current={current ? 'page' : undefined} title={collapsed ? it.label : undefined} aria-label={collapsed ? `${it.label}${it.count ? `, ${it.count}` : ''}` : undefined}>
                 <it.icon size={16} strokeWidth={1.75} aria-hidden />
-                {!collapsed && <span>{it.label}</span>}
+                {!collapsed && <span className="side-label">{it.label}</span>}
                 {!collapsed && it.count !== undefined && (it.badge ? (it.count > 0 && <span className="badge tone-accent num" style={{ marginLeft: 'auto', background: 'var(--accent)', color: 'var(--accent-contrast)' }}>{it.count}</span>) : <span className="count">{it.count.toLocaleString()}</span>)}
               </Link>
             )
@@ -111,7 +111,7 @@ export function Shell({ counts, user, role, children }: { counts: ShellCounts; u
       <a href="#fp-main" className="sr-only">Skip to content</a>
       <div className="fp-shell" data-collapsed={collapsed}>
         <aside className="fp-sidebar material-sidebar hairline-r" aria-label="Sidebar">
-          <div style={{ display: 'flex', alignItems: 'center', height: 'var(--toolbar-h)', padding: '0 20px' }}>{collapsed ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-label="Fieldpoint"><circle cx="12" cy="12" r="9" stroke="var(--accent)" strokeWidth="1.6" /><circle cx="12" cy="12" r="3" fill="var(--accent)" /></svg> : <Wordmark />}</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start', height: 'var(--toolbar-h)', padding: collapsed ? 0 : '0 20px' }}>{collapsed ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-label="Fieldpoint"><circle cx="12" cy="12" r="9" stroke="var(--accent)" strokeWidth="1.6" /><circle cx="12" cy="12" r="3" fill="var(--accent)" /></svg> : <Wordmark />}</div>
           <Suspense fallback={null}><Nav counts={counts} collapsed={collapsed} /></Suspense>
         </aside>
         <div className="fp-body">
@@ -120,8 +120,8 @@ export function Shell({ counts, user, role, children }: { counts: ShellCounts; u
             <span className="fp-hide-desktop"><Wordmark size={17} /></span>
             <h2 className="t-headline fp-toolbar-title" style={{ margin: 0, opacity: scrolled ? 1 : 0, transition: 'opacity var(--dur-fast) var(--ease)' }} aria-hidden={!scrolled}>{title}</h2>
             <div style={{ flex: 1 }} />
-            <button type="button" className="fp-search" onClick={() => setPalette(true)} aria-label="Search and commands (Command K)">
-              <Search size={14} strokeWidth={1.75} aria-hidden /><span className="fp-hide-mobile">Search</span>
+            <button type="button" className="fp-search" onClick={() => setPalette(true)} title="Search and commands (Command K)">
+              <Search size={14} strokeWidth={1.75} aria-hidden /><span className="fp-hide-mobile">Search</span><span className="sr-only fp-hide-desktop">Search</span>
               <kbd className="fp-hide-mobile"><Command size={10} aria-hidden />K</kbd>
             </button>
             <Button variant="icon" className="fp-hide-mobile" aria-label="Keyboard shortcuts" onClick={() => setHelp(true)}><Keyboard size={18} strokeWidth={1.75} /></Button>

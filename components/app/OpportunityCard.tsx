@@ -40,9 +40,9 @@ export function OpportunityCard({ o, actions, compact = false }: { o: OppRow; ac
         <span className="t-footnote" style={{ color: 'var(--label-secondary)' }}>{o.source === 'DIBBS' ? 'DIBBS' : 'SAM'} · {orUnknown(o.notice_type ?? NOTICE_LABELS[o.notice_type_code ?? ''])}</span>
         <span style={{ marginLeft: 'auto' }}><CountdownChip deadline={o.response_deadline} /></span>
       </div>
-      <h3 className="t-headline" style={{ margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+      <h2 className="t-headline" style={{ margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
         <Link href={`/opportunities/${o.id}`} style={{ color: 'inherit' }}>{o.title}</Link>
-      </h3>
+      </h2>
       <p className="t-callout" style={{ margin: 0, color: 'var(--label-secondary)' }}>{orUnknown(o.full_parent_path?.split('.').slice(0, 2).join(' › ') ?? o.department)}</p>
       <dl style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: '8px 16px', margin: 0 }}>
         {[['Set-aside', o.set_aside ?? o.set_aside_code], ['NAICS', o.naics], ['PSC', o.psc], ['Location', placeOf(o) === 'Unknown' ? null : placeOf(o)]].map(([k, v]) => (

@@ -7,7 +7,7 @@ export function Wordmark({ size = 20 }: { size?: number }) {
         <circle cx="12" cy="12" r="3" fill="var(--accent)" />
         <path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4" stroke="var(--accent)" strokeWidth="1.6" strokeLinecap="round" />
       </svg>
-      Fieldpoint
+      <span className="wordmark-text">Fieldpoint</span>
     </span>
   )
 }

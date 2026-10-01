@@ -45,6 +45,7 @@ export function OpportunitiesView({ initial, filters: initialFilters, savedOnly,
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [inspect, setInspect] = useState(true)
   const [aiOpen, setAiOpen] = useState(false)
+  const [rowSheet, setRowSheet] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
   const [overrides, setOverrides] = useState<Record<string, Partial<NonNullable<OppRow['co']>>>>({})
   const { toast } = useToast()
@@ -211,7 +212,7 @@ export function OpportunitiesView({ initial, filters: initialFilters, savedOnly,
                 <tbody>
                   {items.length > 0 && items[0].start > 0 && <tr aria-hidden><td colSpan={visibleCols.length + (canWrite ? 1 : 0)} style={{ height: items[0].start, padding: 0, border: 0 }} /></tr>}
                   {items.map((v) => { const o = rows[v.index]; return (
-                    <tr key={o.id} data-idx={v.index} aria-selected={v.index === sel} aria-rowindex={v.index + 2} style={{ height: rowH, cursor: 'default', opacity: o.co?.workflow_status === 'pass' ? 0.55 : 1 }} onClick={() => setSel(v.index)} onDoubleClick={() => router.push(`/opportunities/${o.id}`)}>
+                    <tr key={o.id} data-idx={v.index} aria-selected={v.index === sel} aria-rowindex={v.index + 2} data-passed={o.co?.workflow_status === 'pass' ? '' : undefined} style={{ height: rowH, cursor: 'default' }} onClick={() => { setSel(v.index); if (tablet) setRowSheet(true) }} onDoubleClick={() => router.push(`/opportunities/${o.id}`)}>
                       {canWrite && <td onClick={(e) => e.stopPropagation()}><input type="checkbox" aria-label={`Select ${o.title}`} checked={checked.has(o.id)} onChange={(e) => setChecked((s) => { const n = new Set(s); if (e.target.checked) n.add(o.id); else n.delete(o.id); return n })} /></td>}
                       {visibleCols.map((c) => <td key={c}>{cell(o, c)}</td>)}
                     </tr>) })}
@@ -225,6 +226,7 @@ export function OpportunitiesView({ initial, filters: initialFilters, savedOnly,
         </div>
       )}
 
+      {tablet && cur && <Sheet open={rowSheet} onOpenChange={setRowSheet} title="Opportunity" width={560}><OpportunityCard o={cur} actions={actions} /></Sheet>}
       <AiSearchSheet open={aiOpen} onOpenChange={setAiOpen} enabled={true} onApply={(f) => apply(FiltersSchema.parse(f))} />
       <SaveSearchSheet open={saveOpen} onOpenChange={setSaveOpen} filters={filters} />
     </>
@@ -241,9 +243,9 @@ function MobileList({ rows, grouped }: { rows: OppRow[]; grouped: boolean }) {
           {g.l && <h2 className="t-caption" style={{ color: 'var(--label-secondary)', margin: '0 0 8px 4px' }}>{title[g.l]}</h2>}
           <ul className="card" style={{ listStyle: 'none', margin: 0, padding: 0, overflow: 'hidden' }}>
             {g.rows.map((o) => (
-              <li key={o.id} className="hairline-b"><Link href={`/opportunities/${o.id}`} style={{ display: 'grid', gap: 4, padding: '12px 16px', minHeight: 44, color: 'inherit' }}>
+              <li key={o.id} className="hairline-b"><Link href={`/opportunities/${o.id}`} style={{ display: 'grid', gap: 4, padding: '12px 16px', minHeight: 44, color: 'inherit', minWidth: 0 }}>
                 <span className="t-callout" style={{ fontWeight: 500, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{o.title}</span>
-                <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}><span className="t-footnote" style={{ color: 'var(--label-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{orUnknown(o.sub_tier ?? o.department)}</span>{!grouped && <ColorPill label={o.color_label} />}<CountdownChip deadline={o.response_deadline} /></span>
+                <span style={{ display: 'flex', gap: 8, alignItems: 'center', minWidth: 0 }}><span className="t-footnote" style={{ color: 'var(--label-secondary)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{orUnknown(o.sub_tier ?? o.department)}{!grouped && o.color_label !== 'GREEN' ? ` · ${o.color_label === 'RED' ? 'Awarded' : 'Watch'}` : ''}</span><span style={{ flex: 'none' }}><CountdownChip deadline={o.response_deadline} /></span></span>
               </Link></li>
             ))}
           </ul>

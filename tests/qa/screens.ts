@@ -28,11 +28,12 @@ async function main() {
     await page.goto(`${BASE}/sign-in`); await page.screenshot({ path: `${OUT}/${scheme}-${sizeName}-signin.png` })
     await login(page, 'member@qa.test')
     const id = await oppId(page, 'Hydraulic pump assembly')
+    const sv = (await oppId(page, 'Servo valve assembly')) ?? id
     const pages: Array<[string, string]> = [
       ['dashboard', '/dashboard'], ['opps-table', '/opportunities?tab=bid_ready'], ['opps-all', '/opportunities?tab=all'], ['opp-overview', `/opportunities/${id}`],
-      ['opp-requirements', `/opportunities/${id}?tab=requirements`], ['opp-documents', `/opportunities/${id}?tab=documents`], ['opp-ai', `/opportunities/${id}?tab=ai`],
-      ['opp-historical', `/opportunities/${id}?tab=historical`], ['opp-suppliers', `/opportunities/${id}?tab=suppliers`], ['opp-pricing', `/opportunities/${id}?tab=pricing`],
-      ['opp-checklist', `/opportunities/${id}?tab=checklist`], ['opp-notes', `/opportunities/${id}?tab=notes`], ['opp-activity', `/opportunities/${id}?tab=activity`],
+      ['opp-requirements', `/opportunities/${sv}?tab=requirements`], ['opp-documents', `/opportunities/${sv}?tab=documents`], ['opp-ai', `/opportunities/${sv}?tab=ai`],
+      ['opp-historical', `/opportunities/${id}?tab=historical`], ['opp-suppliers', `/opportunities/${sv}?tab=suppliers`], ['opp-pricing', `/opportunities/${sv}?tab=pricing`],
+      ['opp-checklist', `/opportunities/${sv}?tab=checklist`], ['opp-notes', `/opportunities/${sv}?tab=notes`], ['opp-activity', `/opportunities/${id}?tab=activity`],
       ['pipeline', '/pipeline'], ['suppliers', '/suppliers'], ['alerts', '/alerts'], ['alert-prefs', '/alerts/preferences'], ['searches', '/searches'], ['company', '/company'], ['settings', '/settings'], ['import', '/import'],
     ]
     for (const [name, url] of pages) {
